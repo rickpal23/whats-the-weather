@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What's The Weather?</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --surface: rgba(255,255,255,0.72);
+      --surface-hover: rgba(255,255,255,0.9);
+      --surface-border: rgba(0,0,0,0.06);
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --text-tertiary: #aeaeb2;
+      --accent: #007aff;
+      --accent-soft: rgba(0,122,255,0.08);
+      --search-bg: rgba(0,0,0,0.04);
+      --search-border: rgba(0,0,0,0.08);
+      --search-focus-border: rgba(0,122,255,0.4);
+      --search-focus-shadow: rgba(0,122,255,0.08);
+      --divider: rgba(0,0,0,0.06);
+      --error-text: #ff3b30;
+      --error-bg: rgba(255,59,48,0.06);
+      --error-border: rgba(255,59,48,0.1);
+      --toggle-bg: rgba(0,0,0,0.06);
+      --toggle-knob: #fff;
+      --toggle-icon: #86868b;
+      --bar-track: rgba(0,0,0,0.06);
+      --temp-gradient-low: #64d2ff;
+      --temp-gradient-mid: #ffd60a;
+      --temp-gradient-high: #ff6961;
+      --backdrop-blur: blur(40px) saturate(180%);
+      --row-selected: rgba(0,122,255,0.06);
+      --dropdown-bg: #fff;
+      --dropdown-hover: #f0f0f5;
+      --dropdown-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    [data-theme="dark"] {
+      --bg: #000000;
+      --surface: rgba(30,30,30,0.72);
+      --surface-hover: rgba(44,44,46,0.8);
+      --surface-border: rgba(255,255,255,0.08);
+      --text-primary: #f5f5f7;
+      --text-secondary: #86868b;
+      --text-tertiary: #636366;
+      --accent: #0a84ff;
+      --accent-soft: rgba(10,132,255,0.12);
+      --search-bg: rgba(255,255,255,0.06);
+      --search-border: rgba(255,255,255,0.1);
+      --search-focus-border: rgba(10,132,255,0.5);
+      --search-focus-shadow: rgba(10,132,255,0.12);
+      --divider: rgba(255,255,255,0.06);
+      --error-text: #ff453a;
+      --error-bg: rgba(255,69,58,0.1);
+      --error-border: rgba(255,69,58,0.15);
+      --toggle-bg: rgba(255,255,255,0.08);
+      --toggle-knob: #2c2c2e;
+      --toggle-icon: #86868b;
+      --bar-track: rgba(255,255,255,0.08);
+      --row-selected: rgba(10,132,255,0.1);
+      --dropdown-bg: #1c1c1e;
+      --dropdown-hover: #2c2c2e;
+      --dropdown-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 20px 60px;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background 0.5s ease, color 0.4s ease;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      width: 56px;
+      height: 30px;
+      background: var(--toggle-bg);
+      border-radius: 15px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 3px;
+      transition: background 0.3s;
+      z-index: 100;
+      -webkit-backdrop-filter: var(--backdrop-blur);
+      backdrop-filter: var(--backdrop-blur);
+    }
+
+    .theme-toggle:hover { opacity: 0.8; }
+
+    .toggle-knob {
+      width: 24px;
+      height: 24px;
+      background: var(--toggle-knob);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    [data-theme="dark"] .toggle-knob { transform: translateX(26px); }
+
+    .toggle-knob svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--toggle-icon);
+      transition: fill 0.3s;
+    }
+
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 36px; }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--text-primary);
+      transition: color 0.4s;
+    }
+
+    /* ── Search ── */
+    .search-container {
+      margin-bottom: 44px;
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: var(--search-bg);
+      border-radius: 12px;
+      border: 1.5px solid var(--search-border);
+      overflow: visible;
+      transition: border-color 0.3s, box-shadow 0.3s, background 0.4s;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--search-focus-border);
+      box-shadow: 0 0 0 4px var(--search-focus-shadow);
+    }
+
+    .search-icon {
+      padding-left: 16px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .search-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--text-tertiary);
+      transition: fill 0.4s;
+    }
+
+    .search-box input {
+      padding: 14px 12px 14px 10px;
+      font-size: 1rem;
+      border: none;
+      flex: 1;
+      min-width: 0;
+      outline: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      transition: color 0.4s;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-tertiary);
+      transition: color 0.4s;
+    }
+
+    .search-box button {
+      padding: 14px 20px;
+      font-size: 0.9rem;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: inherit;
+      letter-spacing: -0.01em;
+      transition: opacity 0.2s, background 0.4s;
+      flex-shrink: 0;
+      border-radius: 0 10px 10px 0;
+    }
+
+    .search-box button:hover { opacity: 0.85; }
+    .search-box button:active { opacity: 0.7; }
+
+    /* ── Autocomplete dropdown ── */
+    .autocomplete-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--dropdown-bg);
+      border-radius: 14px;
+      box-shadow: var(--dropdown-shadow);
+      border: 1px solid var(--surface-border);
+      overflow: hidden;
+      z-index: 200;
+      display: none;
+      transition: background 0.4s;
+    }
+
+    .autocomplete-dropdown.visible { display: block; }
+
+    .ac-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      transition: background 0.15s;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .ac-item:last-child { border-bottom: none; }
+
+    .ac-item:hover, .ac-item.highlighted {
+      background: var(--dropdown-hover);
+    }
+
+    .ac-city {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      transition: color 0.4s;
+    }
+
+    .ac-region {
+      font-size: 0.82rem;
+      color: var(--text-tertiary);
+      transition: color 0.4s;
+    }
+
+    /* ── Location ── */
+    .location-area { text-align: center; margin-bottom: 32px; }
+
+    .location-name {
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: color 0.4s;
+    }
+    .location-name.visible { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    .location-temp {
+      font-size: 4rem;
+      font-weight: 200;
+      letter-spacing: -0.04em;
+      color: var(--text-primary);
+      margin: 4px 0 2px;
+      opacity: 0;
+      transition: color 0.4s;
+    }
+    .location-temp.visible { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.08s forwards; }
+
+    .location-condition {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+      margin-bottom: 4px;
+      opacity: 0;
+      transition: color 0.4s;
+    }
+    .location-condition.visible { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards; }
+
+    .location-range {
+      font-size: 0.95rem;
+      color: var(--text-tertiary);
+      font-weight: 400;
+      opacity: 0;
+      transition: color 0.4s;
+    }
+    .location-range.visible { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.16s forwards; }
+
+    .weather-summary {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 14px;
+      max-width: 400px;
+      line-height: 1.5;
+      opacity: 0;
+      transition: color 0.4s, opacity 0.4s;
+    }
+    .weather-summary.visible { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.22s forwards; }
+
+    /* ── Error ── */
+    .error {
+      color: var(--error-text);
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      padding: 12px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.4s;
+    }
+
+    /* ── Hourly panel ── */
+    .hourly-panel {
+      width: 100%;
+      max-width: 660px;
+      -webkit-backdrop-filter: var(--backdrop-blur);
+      backdrop-filter: var(--backdrop-blur);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 18px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      transition: background 0.4s, border-color 0.4s;
+    }
+    .hourly-panel.visible { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.18s forwards; opacity: 0; }
+
+    .hourly-header {
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--divider);
+      transition: border-color 0.4s;
+    }
+
+    .hourly-header-left { display: flex; align-items: center; gap: 6px; }
+    .hourly-header-left svg { width: 14px; height: 14px; fill: var(--text-tertiary); transition: fill 0.4s; }
+    .hourly-header-left span { font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; transition: color 0.4s; }
+
+    .hourly-day-badge {
+      font-size: 0.75rem; font-weight: 600; color: var(--accent);
+      background: var(--accent-soft); padding: 4px 10px; border-radius: 8px;
+      display: none; transition: all 0.3s;
+    }
+    .hourly-day-badge.visible { display: inline-block; animation: fadeIn 0.3s ease forwards; }
+
+    .hourly-scroll {
+      display: flex; overflow-x: auto; padding: 4px 4px 16px; gap: 0;
+      scroll-behavior: smooth; -webkit-overflow-scrolling: touch; transition: opacity 0.25s;
+    }
+    .hourly-scroll::-webkit-scrollbar { display: none; }
+    .hourly-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    .hourly-scroll.refreshing { opacity: 0; }
+
+    .hour-item {
+      display: flex; flex-direction: column; align-items: center;
+      min-width: 62px; padding: 12px 6px 0; gap: 8px;
+      opacity: 0; animation: fadeIn 0.3s ease forwards;
+    }
+
+    .hour-time { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); transition: color 0.4s; }
+    .hour-time.now { color: var(--accent); }
+    .hour-icon { font-size: 1.4rem; line-height: 1; }
+    .hour-temp { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; transition: color 0.4s; }
+
+    /* ── Forecast panel ── */
+    .forecast-panel {
+      width: 100%; max-width: 660px;
+      -webkit-backdrop-filter: var(--backdrop-blur); backdrop-filter: var(--backdrop-blur);
+      background: var(--surface); border: 1px solid var(--surface-border);
+      border-radius: 18px; overflow: hidden;
+      transition: background 0.4s, border-color 0.4s;
+    }
+    .forecast-panel.visible { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards; opacity: 0; }
+
+    .panel-header {
+      padding: 16px 20px 12px; display: flex; align-items: center; gap: 6px;
+      border-bottom: 1px solid var(--divider); transition: border-color 0.4s;
+    }
+    .panel-header svg { width: 14px; height: 14px; fill: var(--text-tertiary); transition: fill 0.4s; }
+    .panel-header span { font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; transition: color 0.4s; }
+
+    /* ── Day rows ── */
+    .day-row {
+      display: grid; grid-template-columns: 52px 44px 1fr;
+      align-items: center; padding: 14px 20px; gap: 12px;
+      border-bottom: 1px solid var(--divider); opacity: 0;
+      cursor: pointer; transition: background 0.2s, border-color 0.4s;
+      user-select: none; -webkit-user-select: none;
+    }
+    .day-row:last-child { border-bottom: none; }
+    .day-row:hover { background: var(--surface-hover); }
+    .day-row.selected { background: var(--row-selected); }
+    .day-row.visible { animation: fadeIn 0.4s ease forwards; }
+    .day-row:nth-child(2) { animation-delay: 0.24s; }
+    .day-row:nth-child(3) { animation-delay: 0.28s; }
+    .day-row:nth-child(4) { animation-delay: 0.32s; }
+    .day-row:nth-child(5) { animation-delay: 0.36s; }
+    .day-row:nth-child(6) { animation-delay: 0.40s; }
+
+    .day-label { font-weight: 600; font-size: 0.95rem; color: var(--text-primary); transition: color 0.4s; }
+    .day-label.today { color: var(--accent); }
+    .day-row.selected .day-label { color: var(--accent); }
+    .day-icon { font-size: 1.5rem; line-height: 1; text-align: center; }
+
+    .temp-bar-container { display: flex; align-items: center; gap: 10px; height: 100%; }
+    .temp-label { font-size: 0.9rem; font-weight: 500; min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; transition: color 0.4s; }
+    .temp-label.low { color: var(--text-tertiary); }
+    .temp-label.high { color: var(--text-primary); text-align: left; }
+
+    .temp-bar-track { flex: 1; height: 5px; background: var(--bar-track); border-radius: 3px; position: relative; overflow: hidden; transition: background 0.4s; }
+    .temp-bar-fill { position: absolute; top: 0; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--temp-gradient-low), var(--temp-gradient-mid), var(--temp-gradient-high)); transition: left 0.6s cubic-bezier(0.16, 1, 0.3, 1), right 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    /* ── Loading ── */
+    .loading { color: var(--text-tertiary); font-size: 0.95rem; font-weight: 400; transition: color 0.4s; }
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--divider); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── Mobile ── */
+    @media (max-width: 700px) {
+      body { padding: 40px 16px 48px; }
+      h1 { font-size: 1.8rem; }
+      .header { margin-bottom: 28px; }
+      .search-container { margin-bottom: 36px; max-width: 100%; }
+      .search-box input { padding: 12px 10px 12px 8px; font-size: 0.95rem; }
+      .search-box button { padding: 12px 16px; font-size: 0.85rem; }
+      .search-icon { padding-left: 12px; }
+      .location-area { margin-bottom: 24px; }
+      .location-name { font-size: 1.6rem; }
+      .location-temp { font-size: 3.2rem; }
+      .location-condition { font-size: 1rem; }
+      .location-range { font-size: 0.88rem; }
+      .weather-summary { font-size: 0.88rem; max-width: 300px; margin-top: 12px; }
+      .hourly-panel { border-radius: 16px; margin-bottom: 10px; }
+      .hourly-header { padding: 14px 16px 10px; }
+      .hourly-day-badge { font-size: 0.7rem; padding: 3px 8px; }
+      .hour-item { min-width: 54px; padding: 10px 4px 0; gap: 6px; }
+      .hour-time { font-size: 0.72rem; }
+      .hour-icon { font-size: 1.2rem; }
+      .hour-temp { font-size: 0.82rem; }
+      .hourly-scroll { padding: 2px 2px 14px; }
+      .forecast-panel { border-radius: 16px; }
+      .panel-header { padding: 14px 16px 10px; }
+      .day-row { grid-template-columns: 48px 36px 1fr; gap: 8px; padding: 12px 16px; }
+      .temp-label { font-size: 0.82rem; min-width: 28px; }
+      .day-label { font-size: 0.88rem; }
+      .day-icon { font-size: 1.3rem; }
+      .theme-toggle { top: 14px; right: 16px; width: 50px; height: 28px; }
+      .toggle-knob { width: 22px; height: 22px; }
+      [data-theme="dark"] .toggle-knob { transform: translateX(22px); }
+      .toggle-knob svg { width: 12px; height: 12px; }
+      .ac-item { padding: 10px 14px; }
+      .ac-city { font-size: 0.9rem; }
+      .ac-region { font-size: 0.78rem; }
+    }
+
+    @media (max-width: 380px) {
+      h1 { font-size: 1.5rem; }
+      .location-temp { font-size: 2.8rem; }
+      .location-name { font-size: 1.4rem; }
+      .hour-item { min-width: 48px; }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-knob">
+      <svg class="sun-icon" viewBox="0 0 24 24"><path d="M12 17.5a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11zm0-1.5a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-12a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 12 4.5zm0 15a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 12 19.5zm7.5-7.5a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 .75.75zm-15 0a.75.75 0 0 1-.75.75H4.25a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 4.5 12zm13.03-5.53a.75.75 0 0 1 0 1.06l-1.06 1.06a.75.75 0 1 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0zM8.59 15.41a.75.75 0 0 1 0 1.06l-1.06 1.06a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0zm8.88 1.06a.75.75 0 0 1-1.06 0l-1.06-1.06a.75.75 0 0 1 1.06-1.06l1.06 1.06a.75.75 0 0 1 0 1.06zM8.59 8.59a.75.75 0 0 1-1.06 0L6.47 7.53a.75.75 0 0 1 1.06-1.06l1.06 1.06a.75.75 0 0 1 0 1.06z"/></svg>
+      <svg class="moon-icon" style="display:none" viewBox="0 0 24 24"><path d="M21.75 15.5a.75.75 0 0 1-.04.96 9.5 9.5 0 1 1-14.17-14.17.75.75 0 0 1 1.2.54A7.5 7.5 0 0 0 20.25 14.34a.75.75 0 0 1 1.5 1.16z"/></svg>
+    </div>
+  </button>
+
+  <div class="header">
+    <h1>What's The Weather?</h1>
+  </div>
+
+  <div class="search-container">
+    <div class="search-box">
+      <div class="search-icon">
+        <svg viewBox="0 0 24 24"><path d="M21.71 20.29l-5.4-5.4A7.96 7.96 0 0 0 18 10a8 8 0 1 0-8 8 7.96 7.96 0 0 0 4.89-1.69l5.4 5.4a1 1 0 0 0 1.42-1.42zM4 10a6 6 0 1 1 12 0 6 6 0 0 1-12 0z"/></svg>
+      </div>
+      <input type="text" id="searchInput" placeholder="City name or zip code" autocomplete="off" />
+      <button onclick="handleSearch()">Search</button>
+    </div>
+    <div id="dropdown" class="autocomplete-dropdown"></div>
+  </div>
+
+  <div id="error" class="error" style="display:none"></div>
+
+  <div id="locationArea" class="location-area" style="display:none">
+    <div id="location" class="location-name"></div>
+    <div id="locationTemp" class="location-temp"></div>
+    <div id="locationCondition" class="location-condition"></div>
+    <div id="locationRange" class="location-range"></div>
+    <div id="weatherSummary" class="weather-summary"></div>
+  </div>
+
+  <div id="loading" style="display:none;text-align:center">
+    <div class="spinner"></div>
+    <div class="loading">Fetching forecast</div>
+  </div>
+
+  <div id="hourlyPanel" class="hourly-panel" style="display:none">
+    <div class="hourly-header">
+      <div class="hourly-header-left">
+        <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+        <span>Hourly Forecast</span>
+      </div>
+      <span id="hourlyBadge" class="hourly-day-badge"></span>
+    </div>
+    <div id="hourlyScroll" class="hourly-scroll"></div>
+  </div>
+
+  <div id="forecastPanel" class="forecast-panel" style="display:none">
+    <div class="panel-header">
+      <svg viewBox="0 0 24 24"><path d="M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>5-Day Forecast</span>
+    </div>
+    <div id="forecast"></div>
+  </div>
+
+  <script>
+    // ── Theme ──
+    function initTheme() {
+      const saved = localStorage.getItem('weather-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+    }
+
+    function toggleTheme() {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      localStorage.setItem('weather-theme', next);
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.querySelector('.sun-icon').style.display = theme === 'dark' ? 'none' : 'block';
+      document.querySelector('.moon-icon').style.display = theme === 'dark' ? 'block' : 'none';
+    }
+
+    initTheme();
+
+    // ── App state ──
+    let weatherData = null;
+    let currentStartIdx = 0;
+    let selectedDayIndex = 0;
+    let acHighlight = -1;
+    let acResults = [];
+    let debounceTimer = null;
+
+    const searchInput = document.getElementById('searchInput');
+    const dropdown = document.getElementById('dropdown');
+
+    const weatherIcons = {
+      0: '\u2600\uFE0F', 1: '\uD83C\uDF24\uFE0F', 2: '\u26C5',
+      3: '\u2601\uFE0F', 45: '\uD83C\uDF2B\uFE0F', 48: '\uD83C\uDF2B\uFE0F',
+      51: '\uD83C\uDF26\uFE0F', 53: '\uD83C\uDF26\uFE0F', 55: '\uD83C\uDF27\uFE0F',
+      61: '\uD83C\uDF27\uFE0F', 63: '\uD83C\uDF27\uFE0F', 65: '\uD83C\uDF27\uFE0F',
+      71: '\uD83C\uDF28\uFE0F', 73: '\uD83C\uDF28\uFE0F', 75: '\u2744\uFE0F',
+      77: '\u2744\uFE0F', 80: '\uD83C\uDF26\uFE0F', 81: '\uD83C\uDF27\uFE0F',
+      82: '\u26C8\uFE0F', 85: '\uD83C\uDF28\uFE0F', 86: '\u2744\uFE0F',
+      95: '\u26C8\uFE0F', 96: '\u26C8\uFE0F', 99: '\u26C8\uFE0F',
+    };
+
+    const weatherDescriptions = {
+      0: 'Clear', 1: 'Mostly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+      45: 'Fog', 48: 'Rime Fog', 51: 'Light Drizzle', 53: 'Drizzle',
+      55: 'Heavy Drizzle', 61: 'Light Rain', 63: 'Rain', 65: 'Heavy Rain',
+      71: 'Light Snow', 73: 'Snow', 75: 'Heavy Snow', 77: 'Snow Grains',
+      80: 'Light Showers', 81: 'Showers', 82: 'Heavy Showers',
+      85: 'Snow Showers', 86: 'Heavy Snow', 95: 'Thunderstorms',
+      96: 'Thunderstorms', 99: 'Severe Storms',
+    };
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // ── Autocomplete ──
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      clearTimeout(debounceTimer);
+
+      if (q.length < 2) {
+        hideDropdown();
+        return;
+      }
+
+      // If it looks like a zip code being typed, don't autocomplete
+      if (/^\d+$/.test(q)) {
+        hideDropdown();
+        return;
+      }
+
+      debounceTimer = setTimeout(() => fetchSuggestions(q), 250);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        acHighlight = Math.min(acHighlight + 1, acResults.length - 1);
+        updateHighlight();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        acHighlight = Math.max(acHighlight - 1, 0);
+        updateHighlight();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (acHighlight >= 0 && acResults[acHighlight]) {
+          selectResult(acResults[acHighlight]);
+        } else {
+          handleSearch();
+        }
+      } else if (e.key === 'Escape') {
+        hideDropdown();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-container')) hideDropdown();
+    });
+
+    async function fetchSuggestions(query) {
+      try {
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`);
+        const data = await res.json();
+
+        if (!data.results || data.results.length === 0) {
+          hideDropdown();
+          return;
+        }
+
+        // Prioritize US results, then sort by population
+        const sorted = data.results.sort((a, b) => {
+          const aUS = a.country_code === 'US' ? 0 : 1;
+          const bUS = b.country_code === 'US' ? 0 : 1;
+          if (aUS !== bUS) return aUS - bUS;
+          return (b.population || 0) - (a.population || 0);
+        });
+
+        acResults = sorted.slice(0, 5);
+        acHighlight = -1;
+        dropdown.innerHTML = '';
+
+        acResults.forEach((r, i) => {
+          const item = document.createElement('div');
+          item.className = 'ac-item';
+          const region = [r.admin1, r.country].filter(Boolean).join(', ');
+          item.innerHTML = `<span class="ac-city">${r.name}</span><span class="ac-region">${region}</span>`;
+          item.addEventListener('click', () => selectResult(r));
+          item.addEventListener('mouseenter', () => { acHighlight = i; updateHighlight(); });
+          dropdown.appendChild(item);
+        });
+
+        dropdown.classList.add('visible');
+      } catch { hideDropdown(); }
+    }
+
+    function updateHighlight() {
+      dropdown.querySelectorAll('.ac-item').forEach((el, i) => {
+        el.classList.toggle('highlighted', i === acHighlight);
+      });
+    }
+
+    function hideDropdown() {
+      dropdown.classList.remove('visible');
+      acResults = [];
+      acHighlight = -1;
+    }
+
+    function selectResult(result) {
+      const region = result.admin1 || result.country || '';
+      searchInput.value = `${result.name}, ${region}`;
+      hideDropdown();
+      fetchWeather(result.latitude, result.longitude, result.name, region);
+    }
+
+    // ── Search handler ──
+    async function handleSearch() {
+      hideDropdown();
+      const q = searchInput.value.trim();
+      if (!q) return;
+
+      // Zip code path
+      if (/^\d{5}$/.test(q)) {
+        try {
+          const geoRes = await fetch(`https://api.zippopotam.us/us/${q}`);
+          if (!geoRes.ok) { showError('Zip code not found. Please try another.'); return; }
+          const geoData = await geoRes.json();
+          const place = geoData.places[0];
+          fetchWeather(parseFloat(place.latitude), parseFloat(place.longitude), place['place name'], place['state abbreviation']);
+        } catch { showError('Could not look up that zip code.'); }
+        return;
+      }
+
+      // City name path — use geocoding API
+      try {
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) {
+          showError('No results found. Try a different city name or zip code.');
+          return;
+        }
+        const r = data.results[0];
+        const region = r.admin1 || r.country || '';
+        searchInput.value = `${r.name}, ${region}`;
+        fetchWeather(r.latitude, r.longitude, r.name, region);
+      } catch { showError('Could not search for that location.'); }
+    }
+
+    // ── Core weather fetch ──
+    async function fetchWeather(lat, lon, cityName, regionName) {
+      const errorEl = document.getElementById('error');
+      const loadingEl = document.getElementById('loading');
+      const forecastEl = document.getElementById('forecast');
+      const panelEl = document.getElementById('forecastPanel');
+      const locationArea = document.getElementById('locationArea');
+      const hourlyPanel = document.getElementById('hourlyPanel');
+      const hourlyScroll = document.getElementById('hourlyScroll');
+
+      errorEl.style.display = 'none';
+      panelEl.style.display = 'none';
+      hourlyPanel.style.display = 'none';
+      locationArea.style.display = 'none';
+      forecastEl.innerHTML = '';
+      hourlyScroll.innerHTML = '';
+      loadingEl.style.display = 'block';
+
+      try {
+        const weatherRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+          `&hourly=temperature_2m,weather_code` +
+          `&current=temperature_2m,weather_code` +
+          `&temperature_unit=fahrenheit&timezone=auto&forecast_days=5`
+        );
+        if (!weatherRes.ok) throw new Error('Could not fetch weather data.');
+        weatherData = await weatherRes.json();
+
+        const daily = weatherData.daily;
+        const current = weatherData.current;
+        const hourly = weatherData.hourly;
+
+        const nowISO = current.time;
+        const nowHourIndex = hourly.time.findIndex(t => t >= nowISO);
+        currentStartIdx = Math.max(0, nowHourIndex);
+
+        const globalMin = Math.min(...daily.temperature_2m_min);
+        const globalMax = Math.max(...daily.temperature_2m_max);
+
+        // Location header
+        locationArea.style.display = 'block';
+
+        const locationEl = document.getElementById('location');
+        locationEl.textContent = `${cityName}, ${regionName}`;
+        locationEl.className = 'location-name visible';
+
+        const tempEl = document.getElementById('locationTemp');
+        tempEl.textContent = `${Math.round(current.temperature_2m)}\u00B0`;
+        tempEl.className = 'location-temp visible';
+
+        const condEl = document.getElementById('locationCondition');
+        condEl.textContent = weatherDescriptions[current.weather_code] || '';
+        condEl.className = 'location-condition visible';
+
+        const rangeEl = document.getElementById('locationRange');
+        rangeEl.textContent = `H:${Math.round(daily.temperature_2m_max[0])}\u00B0  L:${Math.round(daily.temperature_2m_min[0])}\u00B0`;
+        rangeEl.className = 'location-range visible';
+
+        const summaryEl = document.getElementById('weatherSummary');
+        summaryEl.textContent = generateSummary(0);
+        summaryEl.className = 'weather-summary visible';
+
+        // Hourly
+        hourlyPanel.style.display = 'block';
+        hourlyPanel.className = 'hourly-panel visible';
+        renderHourly(0);
+
+        // Daily forecast rows
+        panelEl.style.display = 'block';
+        panelEl.className = 'forecast-panel visible';
+
+        for (let i = 0; i < daily.time.length; i++) {
+          const date = new Date(daily.time[i] + 'T12:00:00');
+          const code = daily.weather_code[i];
+          const low = Math.round(daily.temperature_2m_min[i]);
+          const high = Math.round(daily.temperature_2m_max[i]);
+          const isToday = i === 0;
+
+          const range = globalMax - globalMin || 1;
+          const leftPct = ((daily.temperature_2m_min[i] - globalMin) / range) * 100;
+          const rightPct = 100 - ((daily.temperature_2m_max[i] - globalMin) / range) * 100;
+
+          const row = document.createElement('div');
+          row.className = 'day-row visible' + (isToday ? ' selected' : '');
+          row.onclick = () => renderHourly(i);
+          row.innerHTML = `
+            <div class="day-label ${isToday ? 'today' : ''}">${isToday ? 'Today' : dayNamesShort[date.getDay()]}</div>
+            <div class="day-icon">${weatherIcons[code] || '\u2600\uFE0F'}</div>
+            <div class="temp-bar-container">
+              <span class="temp-label low">${low}\u00B0</span>
+              <div class="temp-bar-track">
+                <div class="temp-bar-fill" style="left:${leftPct}%;right:${rightPct}%"></div>
+              </div>
+              <span class="temp-label high">${high}\u00B0</span>
+            </div>
+          `;
+          forecastEl.appendChild(row);
+        }
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        loadingEl.style.display = 'none';
+      }
+    }
+
+    // ── Render hourly for a given day ──
+    function renderHourly(dayIndex) {
+      const hourlyScroll = document.getElementById('hourlyScroll');
+      const badge = document.getElementById('hourlyBadge');
+      const hourly = weatherData.hourly;
+      const daily = weatherData.daily;
+      const targetDate = daily.time[dayIndex];
+
+      selectedDayIndex = dayIndex;
+
+      // Update summary
+      const summaryEl = document.getElementById('weatherSummary');
+      summaryEl.textContent = generateSummary(dayIndex);
+      summaryEl.className = 'weather-summary';
+      void summaryEl.offsetHeight;
+      summaryEl.className = 'weather-summary visible';
+
+      // Update selected state
+      document.querySelectorAll('.day-row').forEach((row, i) => {
+        row.classList.toggle('selected', i === dayIndex);
+      });
+
+      // Update badge
+      if (dayIndex === 0) {
+        badge.className = 'hourly-day-badge';
+      } else {
+        const d = new Date(targetDate + 'T12:00:00');
+        badge.textContent = `${dayNames[d.getDay()]}, ${monthNames[d.getMonth()]} ${d.getDate()}`;
+        badge.className = 'hourly-day-badge visible';
+      }
+
+      // Fade out, swap, fade in
+      hourlyScroll.classList.add('refreshing');
+
+      setTimeout(() => {
+        hourlyScroll.innerHTML = '';
+        hourlyScroll.scrollLeft = 0;
+
+        let rendered = 0;
+        for (let i = 0; i < hourly.time.length; i++) {
+          const timeStr = hourly.time[i];
+          const dateKey = timeStr.slice(0, 10);
+
+          if (dayIndex === 0) {
+            if (i < currentStartIdx) continue;
+            if (dateKey !== targetDate && rendered > 0) break;
+            if (dateKey !== targetDate) continue;
+          } else {
+            if (dateKey !== targetDate) { if (rendered > 0) break; continue; }
+          }
+
+          const hDate = new Date(timeStr);
+          const hCode = hourly.weather_code[i];
+          const hTemp = Math.round(hourly.temperature_2m[i]);
+          const isNow = (dayIndex === 0 && i === currentStartIdx);
+
+          let timeLabel;
+          if (isNow) { timeLabel = 'Now'; }
+          else {
+            const h = hDate.getHours();
+            timeLabel = h === 0 ? '12AM' : h < 12 ? h + 'AM' : h === 12 ? '12PM' : (h - 12) + 'PM';
+          }
+
+          const item = document.createElement('div');
+          item.className = 'hour-item';
+          item.style.animationDelay = `${Math.min(rendered * 0.02, 0.3)}s`;
+          item.innerHTML = `
+            <span class="hour-time ${isNow ? 'now' : ''}">${timeLabel}</span>
+            <span class="hour-icon">${weatherIcons[hCode] || '\u2600\uFE0F'}</span>
+            <span class="hour-temp">${hTemp}\u00B0</span>
+          `;
+          hourlyScroll.appendChild(item);
+          rendered++;
+        }
+
+        hourlyScroll.classList.remove('refreshing');
+      }, 200);
+    }
+
+    // ── Fun weather summary generator ──
+    function generateSummary(dayIndex) {
+      const daily = weatherData.daily;
+      const hourly = weatherData.hourly;
+      const targetDate = daily.time[dayIndex];
+      const high = Math.round(daily.temperature_2m_max[dayIndex]);
+      const low = Math.round(daily.temperature_2m_min[dayIndex]);
+      const code = daily.weather_code[dayIndex];
+      const isToday = dayIndex === 0;
+      const d = new Date(targetDate + 'T12:00:00');
+      const dayName = dayNames[d.getDay()];
+      const spread = high - low;
+
+      const dayHours = hourly.time.reduce((acc, t, i) => {
+        if (t.startsWith(targetDate) && (isToday ? i >= currentStartIdx : true))
+          acc.push({ h: new Date(t).getHours(), code: hourly.weather_code[i], temp: hourly.temperature_2m[i] });
+        return acc;
+      }, []);
+
+      const rainHours = dayHours.filter(x => [51,53,55,61,63,65,80,81,82].includes(x.code));
+      const hasRain = rainHours.length > 0;
+      const rainPct = dayHours.length ? Math.round(rainHours.length / dayHours.length * 100) : 0;
+      const hasHeavyRain = dayHours.some(x => [65,82].includes(x.code));
+      const hasSnow = dayHours.some(x => [71,73,75,77,85,86].includes(x.code));
+      const hasStorm = dayHours.some(x => [95,96,99].includes(x.code));
+      const isClear = [0,1].includes(code);
+      const isCloudy = [2,3].includes(code);
+      const isFoggy = [45,48].includes(code);
+
+      const rainStartsAfternoon = hasRain && rainHours[0]?.h >= 12;
+      const rainStartsEvening = hasRain && rainHours[0]?.h >= 17;
+      const rainEndsEarly = hasRain && rainHours.every(x => x.h < 12);
+      const rainAllDay = hasRain && rainPct > 60;
+
+      // Temp trend: does it get significantly colder or warmer?
+      const temps = dayHours.map(x => x.temp);
+      const peakTemp = temps.length ? Math.round(Math.max(...temps)) : high;
+      const dropFromPeak = peakTemp - low;
+
+      const hour = new Date().getHours();
+      const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+      const prefix = isToday ? `This ${timeOfDay}` : dayName;
+      const onDay = isToday ? '' : ' on ' + dayName;
+
+      // Randomized temperature descriptors for variety
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+      const hotVibes = pick(['absolutely scorching', 'blazing hot', 'seriously toasty', 'sweltering']);
+      const warmVibes = pick(['warm and lovely', 'warm and sunny', 'nicely warm', 'pleasantly warm']);
+      const mildVibes = pick(['perfectly pleasant', 'comfortably mild', 'just right', 'easy-breezy']);
+      const coolVibes = pick(['a bit crisp', 'cool and fresh', 'on the cool side', 'brisk but nice']);
+      const coldVibes = pick(['chilly', 'nippy', 'cold and brisk', 'quite cold']);
+      const freezeVibes = pick(['absolutely freezing', 'bone-chilling cold', 'bitterly cold', 'arctic-level cold']);
+
+      const tempVibe =
+        high >= 100 ? hotVibes :
+        high >= 90 ? pick(['scorching', 'seriously hot', 'blazing']) :
+        high >= 80 ? warmVibes :
+        high >= 70 ? mildVibes :
+        high >= 60 ? pick(['comfortably mild', 'mild and mellow', 'not too hot, not too cold']) :
+        high >= 50 ? coolVibes :
+        high >= 40 ? coldVibes :
+        high >= 32 ? pick(['cold and brisk', 'properly cold', 'bundle-up cold']) : freezeVibes;
+
+      // Buddy-style connectors and intros
+      const headsUp = pick(['Heads up:', 'Quick weather check:', 'So here\u2019s the deal:', 'Real talk:', 'Weather report:', 'OK so,', 'Here\u2019s what\u2019s up:', 'Just so you know,']);
+      const goodNews = pick(['Good news:', 'The good news?', 'Hey,', 'Lucky you \u2014', 'Nice \u2014']);
+      const closers = pick([
+        'Plan accordingly!', 'You\u2019ve been warned.', 'Just saying.', 'Do with that what you will.',
+        'Act accordingly.', 'Your call.', 'Now you know!', 'Dress smart.', 'You heard it here first.',
+      ]);
+
+      // ── STORMS ──
+      if (hasStorm) return pick([
+        `${headsUp} ${prefix} is bringing the full light show \u2014 thunderstorms are rolling in with a high of ${high}\u00B0. The kind of weather that makes you grateful for a roof and a streaming subscription. Maybe reschedule anything outdoors.`,
+        `OK, ${isToday ? 'today' : dayName} is getting dramatic. Storms are in the forecast, temps around ${high}\u00B0, and the sky is going to put on a show. Stay indoors if you can, and if you can\u2019t, at least enjoy the theater of it all.`,
+        `${prefix} says: thunder, lightning, the works. We\u2019re looking at ${high}\u00B0 before things get intense. Perfect excuse for a movie marathon and zero regrets about canceling plans. ${closers}`,
+        `Storm alert${onDay}! ${high}\u00B0 on paper but the vibe is "stay inside and watch nature do its thing." Charge your devices, grab some snacks, and settle in \u2014 this one\u2019s going to be loud.`,
+        `Not gonna sugarcoat it \u2014 ${isToday ? 'today' : dayName} has thunderstorms written all over it. ${high}\u00B0 with a side of dramatic skies and possibly some wild wind. Indoor activities are the move. ${closers}`,
+        `${headsUp} the sky${onDay} is choosing violence (meteorologically speaking). Thunderstorms, ${high}\u00B0, and that electric feeling in the air. Keep plans flexible and your umbrella closer.`,
+      ]);
+
+      // ── SNOW ──
+      if (hasSnow) return pick([
+        `Snow is coming${onDay} and honestly? Kind of exciting. ${high}\u00B0 at the peak, dropping to ${low}\u00B0. The world gets that fresh white coat and everything looks cleaner for about five minutes. Bundle up and enjoy it.`,
+        `${prefix} is full winter mode \u2014 snowflakes, frosty air, and the kind of cold (${low}\u00B0) that makes your morning coffee feel like a survival tool. High of only ${high}\u00B0, so layer up like you mean it.`,
+        `${headsUp} it\u2019s a snow day${onDay}. ${high}\u00B0 at best, ${low}\u00B0 at worst. The kind of weather where hot cocoa isn\u2019t a treat, it\u2019s medicine. If you can work from home, this is your sign.`,
+        `Time to channel your inner penguin \u2014 ${isToday ? 'today' : dayName} is bringing snow with temps maxing out at ${high}\u00B0. Roads might be tricky, sidewalks definitely will be, and your couch has never looked so inviting.`,
+        `${goodNews} if you like snow, ${isToday ? 'today' : dayName} is your day. ${high}\u00B0 high and ${low}\u00B0 low with flurries in the mix. Bad news if you have to drive anywhere. Either way, dress like you\u2019re going to Narnia.`,
+        `Snowflakes incoming${onDay}! It\u2019s going to be ${tempVibe} with a high of ${high}\u00B0 and things getting real frosty at ${low}\u00B0. Nature\u2019s basically telling you to stay cozy. Listen to nature.`,
+      ]);
+
+      // ── RAIN: Evening onset ──
+      if (hasRain && rainStartsEvening) return pick([
+        `${goodNews} most of ${isToday ? 'today' : dayName} looks solid \u2014 ${high}\u00B0 and dry. But the evening has other plans: rain\u2019s moving in later. Get your outdoor stuff done while the sun cooperates, and maybe grab dinner before the drizzle hits.`,
+        `${prefix} is a two-parter: sunshine and ${high}\u00B0 for the main event, then rain for the evening encore. Not a bad deal \u2014 you get the good part when you\u2019re actually out and about. Just keep an umbrella in your bag.`,
+        `Here\u2019s the scoop: dry and ${tempVibe} at ${high}\u00B0 until evening, then the rain rolls in. Think of it as nature giving you a deadline to finish your outdoor plans. ${closers}`,
+        `${headsUp} ${isToday ? 'today' : dayName} plays nice until sundown. ${high}\u00B0 and pleasant during the day, but evening rain is definitely on the menu. Patio dinner? Go early.`,
+      ]);
+
+      // ── RAIN: Afternoon onset ──
+      if (hasRain && rainStartsAfternoon) return pick([
+        `Mornings look great${onDay} \u2014 enjoy that ${high}\u00B0 window while it lasts. Afternoon rain is on its way though, so front-load your plans if you can. The morning is your MVP here.`,
+        `${headsUp} ${isToday ? 'today' : dayName} has a plot twist. The morning is ${tempVibe} at ${high}\u00B0, but rain crashes the party in the afternoon. Get your errands done early and you\u2019ll be golden.`,
+        `Split forecast${onDay}: morning sunshine, afternoon showers. ${high}\u00B0 overall, so it\u2019ll still feel ${tempVibe} even when it\u2019s wet. Pro tip: do the fun stuff before noon.`,
+        `The morning is giving you a gift${onDay} \u2014 ${high}\u00B0 and dry. The afternoon? Rain. It\u2019s like weather BOGO: buy the nice morning, get free afternoon drizzle. Umbrella after lunch.`,
+      ]);
+
+      // ── RAIN: Morning only ──
+      if (hasRain && rainEndsEarly) return pick([
+        `${prefix} starts soggy but hang in there \u2014 rain clears by midday and you\u2019re left with ${high}\u00B0 and a surprisingly solid afternoon. The early risers get wet, the patient ones get rewarded.`,
+        `Morning rain${onDay}, but it\u2019s the opening act, not the headliner. By afternoon it\u2019s ${high}\u00B0 and dry. Those afternoon plans? Still very much on. Just dodge the puddles early.`,
+        `Rain before noon, then the sky remembers it\u2019s supposed to be nice. ${high}\u00B0 and pleasant for the rest of ${isToday ? 'the day' : dayName}. Patience pays off \u2014 literally the afternoon will feel like a different day.`,
+        `${headsUp} wet start${onDay} but don\u2019t let it fool you. The rain bails by midday and leaves you with ${high}\u00B0 of genuinely nice weather. Nature\u2019s version of a slow start to the morning.`,
+      ]);
+
+      // ── HEAVY RAIN ──
+      if (hasHeavyRain) return pick([
+        `${prefix} is not playing around \u2014 we\u2019re talking serious rain, the puddles-up-to-your-ankles kind. ${high}\u00B0 but it won\u2019t feel like it. This is "order delivery and watch the rain from your window" weather.`,
+        `Heavy rain alert${onDay}. The kind where umbrellas feel decorative and you need actual waterproof gear. ${high}\u00B0 on paper, but the vibe is soup, blankets, and nowhere to be. ${closers}`,
+        `Yeah so ${isToday ? 'today' : dayName} is going to be properly wet. We\u2019re talking heavy rain, ${high}\u00B0, and the kind of conditions where even ducks would think twice. Indoor plans are strongly recommended.`,
+        `${headsUp} heavy rain is the headline${onDay}. ${high}\u00B0 but honestly the temp is secondary to the "bring a rowboat" energy. Stay dry, stay cozy, and maybe make that recipe you\u2019ve been putting off.`,
+      ]);
+
+      // ── RAIN: All day ──
+      if (rainAllDay) return pick([
+        `It\u2019s a full-on rain day${onDay} \u2014 showers pretty much start to finish at ${high}\u00B0. The kind of day where you fully commit to being indoors and honestly, it\u2019s kind of nice to have permission to do that.`,
+        `Rain from morning to night${onDay}. ${high}\u00B0 and wet the entire time. Think of it as the universe giving you a pass to stay in, make something warm, and catch up on that show everyone\u2019s been talking about.`,
+        `${prefix} is a wash \u2014 literally. Rain all day at ${high}\u00B0. The silver lining? No FOMO about being inside. Embrace the coziness, put on some music, and ride it out.`,
+        `${headsUp} it\u2019s going to rain basically all of ${isToday ? 'today' : dayName}. ${high}\u00B0 and consistently soggy. If you\u2019re a "rain is peaceful" person, this is your Super Bowl. If not, there\u2019s always Netflix.`,
+      ]);
+
+      // ── RAIN: General ──
+      if (hasRain) return pick([
+        `${prefix} has some rain in the mix \u2014 nothing wild, just ${high}\u00B0 with scattered showers. Grab an umbrella, maybe treat yourself to that coffee shop you\u2019ve been meaning to try. Rainy days have their charm.`,
+        `A bit of rain${onDay} but honestly, it\u2019s manageable. ${high}\u00B0 and ${tempVibe} between the drops. Just carry an umbrella and you\u2019re golden. Don\u2019t let a few showers ruin your vibe.`,
+        `Rain\u2019s in the forecast${onDay}, ${high}\u00B0 with some on-and-off showers. The kind of weather that pairs perfectly with a good playlist, a warm drink, and absolutely nowhere to rush to. ${closers}`,
+        `${prefix} has that gentle rain energy \u2014 ${high}\u00B0, some showers here and there, and the world smelling like petrichor. Not the worst vibe, honestly. Some people pay for this at spas.`,
+        `${headsUp} scattered showers${onDay} with a high of ${high}\u00B0. It\u2019s not going to ruin your day, but it might ruin your hair. Umbrella in the bag, positive attitude in the heart.`,
+        `Light showers are hanging around${onDay}, keeping things ${tempVibe} at ${high}\u00B0. Think of it less as "bad weather" and more as "ambient sound effects for your day." ${closers}`,
+        `Some rain${onDay}, some ${tempVibe} temps at ${high}\u00B0, and the overall vibe is "cozy." The kind of day where everything just feels a little softer. Lean into it.`,
+      ]);
+
+      // ── FOG ──
+      if (isFoggy) return pick([
+        `${prefix} is straight out of a mystery novel \u2014 foggy, ${tempVibe} at ${high}\u00B0, and visibility is doing the bare minimum. Drive slow, headlights on, and enjoy the moody atmosphere while it lasts.`,
+        `Fog is blanketing everything${onDay}. ${high}\u00B0 and the world looks like it has a soft filter on it. Kind of beautiful, kind of spooky. Take it slow out there, especially on the roads.`,
+        `${headsUp} it\u2019s foggy${onDay}. Like, proper can\u2019t-see-the-end-of-the-block fog. ${high}\u00B0 and ${tempVibe} otherwise, but the main thing is: be careful driving and enjoy how cinematic everything looks.`,
+        `The fog is giving main character energy${onDay}. ${high}\u00B0 and mysterious \u2014 like the weather decided to add a filter to the whole day. Just keep your headlights on and embrace the vibe.`,
+      ]);
+
+      // ── CLEAR + VERY HOT ──
+      if (isClear && high >= 90) return pick([
+        `${prefix} is going to be intense \u2014 ${high}\u00B0 with zero cloud cover. The sun is taking no prisoners. Sunscreen, water, hat: the holy trinity. If you can find shade, become best friends with it.`,
+        `${goodNews} it\u2019s clear and gorgeous. Bad news: ${high}\u00B0 and the sun is going full blast${onDay}. Stay hydrated like your life depends on it (because it kind of does). Beach, pool, or AC \u2014 pick your survival strategy.`,
+        `Clear skies and ${high}\u00B0 of serious heat${onDay}. The kind of day where pavement gets soft, your car becomes an oven, and ice cream melts before you can eat it. Beautiful but brutal. Respect the sun.`,
+        `${high}\u00B0 and not a single cloud to offer relief${onDay}. ${prefix} is stunning but ${tempVibe} \u2014 the kind of gorgeous that comes with a warning label. SPF 50 minimum, friends.`,
+        `${headsUp} it\u2019s a scorcher${onDay}. ${high}\u00B0, clear skies, and the kind of heat that makes you appreciate whoever invented air conditioning. Outdoor plans? Early morning or evening only. Your skin will thank you.`,
+        `You know those days where the weather app number makes you go "yikes"? ${isToday ? 'Today' : dayName} is that day. ${high}\u00B0, relentlessly sunny, gloriously clear. Gorgeous, but hydrate or die-drate. ${closers}`,
+      ]);
+
+      // ── CLEAR + WARM ──
+      if (isClear && high >= 75) return pick([
+        `${prefix} is genuinely perfect \u2014 ${high}\u00B0, clear skies, and that goldilocks warmth where you don\u2019t need a jacket but won\u2019t break a sweat. Get outside and soak it in. This is the good stuff.`,
+        `${goodNews} ${high}\u00B0 and clear${onDay}. This is the kind of weather that makes you want to eat lunch outside, go for a walk, and generally appreciate being alive. Don\u2019t waste it scrolling on your phone.`,
+        `${high}\u00B0 with nothing but blue sky above${onDay}. ${prefix} is basically a screensaver come to life. The kind of day you\u2019ll wish you could bottle up for December. Go do something you enjoy.`,
+        `${headsUp} (the good kind) \u2014 ${isToday ? 'today' : dayName} is looking amazing. ${high}\u00B0, crystal clear, and ${tempVibe}. If you have any outdoor plans, this is the day to go all in. No excuses.`,
+        `Picture this: ${high}\u00B0, not a cloud in sight, gentle breeze. That\u2019s ${isToday ? 'today' : dayName}. The weather is literally doing everything right. Ice cream outside? Farmers market? Long walk? All excellent choices.`,
+        `If weather had a highlight reel, ${isToday ? 'today' : dayName} would make the cut. ${high}\u00B0 and clear \u2014 warm enough to feel alive, cool enough to actually enjoy being outside. Chef\u2019s kiss.`,
+      ]);
+
+      // ── CLEAR + COOL/MILD ──
+      if (isClear) return pick([
+        `${prefix} is looking beautiful \u2014 clear skies and ${tempVibe} at ${high}\u00B0. ${spread > 20 ? `Big swing between the high and the ${low}\u00B0 low though, so layers are your best friend today.` : `A solid, no-surprises kind of day. Enjoy it.`}`,
+        `Nothing but blue skies${isToday ? ' ahead' : onDay}. ${high}\u00B0 and ${tempVibe} \u2014 the kind of day that just works. No backup plan needed, no weather drama, just good vibes. ${closers}`,
+        `${goodNews} clear and ${tempVibe} at ${high}\u00B0${onDay}. ${spread > 15 ? `Keep in mind it dips to ${low}\u00B0 later, so a layer in your bag isn\u2019t the worst idea.` : `Straightforward good weather, no fine print.`}`,
+        `${prefix} is giving you that crisp, clear energy at ${high}\u00B0. ${dropFromPeak > 15 ? `Starts nice but cools off significantly to ${low}\u00B0, so dress for both acts.` : `The kind of day where you can just exist outside and feel great about it.`}`,
+        `${headsUp} (it\u2019s good news) \u2014 clear skies, ${high}\u00B0, and ${tempVibe} vibes${onDay}. Whether you\u2019re running errands or doing something fun, the weather is on your side today.`,
+        `${high}\u00B0, clear, and ${tempVibe}${onDay}. Not the kind of weather that makes headlines, but the kind that makes your day noticeably better. The unsung hero of weather days.`,
+      ]);
+
+      // ── CLOUDY + COLD ──
+      if (isCloudy && high < 50) return pick([
+        `${prefix} is textbook sweater weather \u2014 overcast and ${tempVibe} at ${high}\u00B0. The clouds are doing their moody thing and honestly? It\u2019s kind of a vibe. Cozy layers, warm drinks, maybe a candle.`,
+        `Gray skies and ${high}\u00B0${onDay}. The kind of day where you light a candle, make something warm to drink, and give yourself permission to move at a slower pace. The world can wait.`,
+        `${headsUp} it\u2019s the cloudy-and-cold combo${onDay}. ${high}\u00B0 and overcast, which sounds bleak but is actually prime "cozy productivity" weather. Sweater on, coffee in hand, you\u2019ve got this.`,
+        `${prefix} is channeling full autumn vibes \u2014 ${high}\u00B0, gray skies, and the kind of chill in the air that makes you walk faster. Not bad, just... layered. Both the weather and your outfit.`,
+        `Clouds and ${high}\u00B0${onDay}. Look, it\u2019s not the most exciting forecast, but there\u2019s something honest about a cloudy cold day. No pretense. Just you, your warmest jacket, and a mug of something hot.`,
+      ]);
+
+      // ── CLOUDY + MILD/WARM ──
+      if (isCloudy) return pick([
+        `${prefix} is cloudy but ${tempVibe} at ${high}\u00B0 \u2014 think of it as nature\u2019s soft lighting. Not the flashiest weather day, but comfortable and easy. You can do pretty much anything without weather being a factor.`,
+        `Clouds are running the show${onDay}, but honestly? It\u2019s a pleasant ${high}\u00B0 underneath. No rain, no drama, just that mellow overcast energy. Think of it as the background music of weather \u2014 unobtrusive but nice.`,
+        `${high}\u00B0 and cloudy${onDay} \u2014 the reliable friend of weather patterns. Nothing flashy, nothing awful, just consistently fine. The kind of day where the weather isn\u2019t a talking point and that\u2019s OK.`,
+        `${headsUp} clouds but no rain${onDay}. ${high}\u00B0 and ${tempVibe}. The forecast equivalent of "fine dining at home" \u2014 not the most glamorous, but honestly pretty comfortable. ${closers}`,
+        `Overcast and ${high}\u00B0${onDay}. Not winning any weather beauty contests, but your plans are safe, the temps are comfortable, and sometimes "perfectly fine" is exactly what you need.`,
+        `${goodNews} it\u2019s ${tempVibe} at ${high}\u00B0 even with the clouds${onDay}. No sunburn risk, no rain in sight, and honestly great conditions for being outside without squinting. Silver linings, literally.`,
+        `${prefix} is playing it cool with an overcast sky and ${high}\u00B0. The kind of day that doesn\u2019t demand anything from you weather-wise. No sunscreen debate, no umbrella decision. Just go live your life.`,
+      ]);
+
+      // ── FALLBACK ──
+      const fallbacks = [
+        `${prefix} is ${tempVibe} with a high of ${high}\u00B0 and a low of ${low}\u00B0. ${spread > 20 ? `That\u2019s a ${spread}-degree swing, so layers are non-negotiable. Morning you and afternoon you need different outfits.` : `Pretty steady temperature-wise \u2014 dress for the high and you\u2019re set all day.`}`,
+        `${headsUp} ${high}\u00B0 high and ${low}\u00B0 low${onDay}. ${tempVibe} overall \u2014 ${spread > 15 ? `with enough of a temperature swing to keep things interesting. Layers are your friend.` : `nice and consistent, no wardrobe curveballs.`}`,
+        `${prefix} is giving ${tempVibe} energy at ${high}\u00B0. Nothing extreme, nothing to worry about \u2014 just a day that lets you focus on literally anything other than the weather. ${closers}`,
+      ];
+      return pick(fallbacks);
+    }
+
+    function showError(msg) {
+      const errorEl = document.getElementById('error');
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
